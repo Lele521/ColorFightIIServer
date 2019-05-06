@@ -1,6 +1,6 @@
 from ..colorfight import Colorfight
 from ..constants import GAME_WIDTH, GAME_HEIGHT
-from ..constants import BLD_GOLD_MINE, BLD_ENERGY_WELL
+from ..constants import BLD_GOLD_MINE, BLD_ENERGY_WELL, BLD_HOME
 from .util import *
 import pytest
 
@@ -90,3 +90,50 @@ def test_build_on_invalid_cell():
     game.update(True)
     info = game.get_game_info()
     assert(info["error"])
+
+def test_build_duplicate_home():
+    game = Colorfight()
+    uid = join(game, 'a', 'a')
+    game.update(True)
+    info = game.get_game_info()
+    x, y = info['users'][uid]['cells'][0]
+    game.users[uid].energy = 10000
+    game.users[uid].gold = 10000
+    if y == 0:
+        attack_y = 1
+    else:
+        attack_y = y - 1
+    game.game_map._cells[attack_y][x].natural_cost = 200
+    result = attack(game, uid, x, attack_y, 200)
+    game.update(True)
+    result = build(game, uid, x, attack_y, BLD_HOME)
+    assert (result["success"])
+    game.update(True)
+    info = game.get_game_info()
+    assert (info["error"][uid])
+
+def test_build_home():
+    game = Colorfight()
+    uid = join(game, 'a', 'a')
+    uid2 = join(game, 'b','a')
+    game.update(True)
+    info = game.get_game_info()
+    x, y = info['users'][uid]['cells'][0]
+    game.users[uid].energy = 10000
+    game.users[uid].gold = 10000
+    if y == 0:
+        attack_y = 1
+    else:
+        attack_y = y - 1
+    game.game_map._cells[attack_y][x].natural_cost = 200
+    result = attack(game, uid, x, attack_y, 200)
+    assert (result["success"])
+    game.update(True)
+    game.game_map[(x, y)].owner = uid2
+    game.update(True)
+    #Now the player_a has no home building
+    result = build(game, uid, x, attack_y, BLD_HOME)
+    assert (result["success"])
+    game.update(True)
+    info = game.get_game_info()
+    assert (not info["error"][uid])
